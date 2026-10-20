@@ -1,0 +1,683 @@
+<!doctype html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Avery Creative Labs</title>
+  <meta name="description" content="Avery Creative Labs is an independent studio in the Pacific Northwest architecting applied AI workflows, accessibility-first tabletop gaming utilities, and automated synthetic media pipelines." />
+  <meta name="theme-color" content="#070709" />
+  <meta property="og:title" content="Avery Creative Labs" />
+  <meta property="og:description" content="Where frontier AI meets creative velocity, digital media, and the game table." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://averycreativelabs.com/" />
+  <link rel="canonical" href="https://averycreativelabs.com/" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23070709'/%3E%3Cpath d='M16 5l2.6 8.4L27 16l-8.4 2.6L16 27l-2.6-8.4L5 16l8.4-2.6z' fill='%2338bdf8'/%3E%3C/svg%3E" />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <!-- Gate entrance animations on JS so content is visible without it -->
+  <script>document.documentElement.classList.add('js');</script>
+
+  <!-- Tailwind (Play CDN) -->
+  <script src="https://cdn.tailwindcss.com/3.4.16"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            obsidian: '#070709',
+            cyan: { 400: '#38bdf8' },
+          },
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'monospace'],
+          },
+        },
+      },
+    };
+  </script>
+
+  <!-- Lucide icons -->
+  <script src="https://unpkg.com/lucide@0.454.0/dist/umd/lucide.min.js" defer></script>
+
+  <style>
+    :root { color-scheme: dark; }
+    html { background: #070709; overflow-x: clip; }
+    body {
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      font-feature-settings: "cv11", "ss01", "ss03";
+    }
+    ::selection { background: rgba(56, 189, 248, 0.28); color: #fff; }
+
+    /* ---------- Background layers ---------- */
+    #hex-field {
+      position: fixed; inset: 0; width: 100%; height: 100%;
+      z-index: -30; pointer-events: none;
+    }
+    #neural-field {
+      position: fixed; inset: 0; width: 100%; height: 100%;
+      z-index: -20; pointer-events: none;
+    }
+    .bg-grid {
+      background-image:
+        linear-gradient(to right, rgba(255,255,255,0.035) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255,255,255,0.035) 1px, transparent 1px);
+      background-size: 64px 64px;
+      -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 0%, #000 30%, transparent 75%);
+              mask-image: radial-gradient(ellipse 70% 60% at 50% 0%, #000 30%, transparent 75%);
+    }
+    .noise::after {
+      content: ""; position: fixed; inset: 0; pointer-events: none; z-index: -10; opacity: .035;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+
+    /* ---------- Shimmer headline text ---------- */
+    .shimmer {
+      background: linear-gradient(110deg, #38bdf8 0%, #818cf8 30%, #e0f2fe 50%, #6366f1 70%, #38bdf8 100%);
+      background-size: 250% 100%;
+      -webkit-background-clip: text; background-clip: text;
+      -webkit-text-fill-color: transparent; color: transparent;
+      animation: shimmer 6s linear infinite;
+    }
+    @keyframes shimmer {
+      0%   { background-position: 100% 50%; }
+      100% { background-position: -150% 50%; }
+    }
+
+    /* ---------- Entrance: fade-up + blur-in ---------- */
+    .js .reveal {
+      opacity: 0;
+      transform: translateY(20px);
+      filter: blur(8px);
+      transition:
+        opacity .9s cubic-bezier(.16,1,.3,1),
+        transform .9s cubic-bezier(.16,1,.3,1),
+        filter .9s cubic-bezier(.16,1,.3,1);
+      transition-delay: var(--d, 0ms);
+      will-change: opacity, transform, filter;
+    }
+    .js .reveal.is-visible { opacity: 1; transform: none; filter: blur(0); }
+
+    /* ---------- Spotlight cards ---------- */
+    .spot-card {
+      position: relative;
+      isolation: isolate;
+      border-radius: 1.25rem;
+      background: rgba(24, 24, 27, 0.4);
+      -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06);
+      --mouse-x: -999px; --mouse-y: -999px;
+    }
+    /* Border highlight near cursor (lights up neighbours too, Linear-style) */
+    .spot-card::before {
+      content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1px;
+      background: radial-gradient(400px circle at var(--mouse-x) var(--mouse-y), rgba(56,189,248,0.55), rgba(99,102,241,0.25) 25%, transparent 45%);
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor;
+              mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+      opacity: 0; transition: opacity .4s ease; pointer-events: none; z-index: 1;
+    }
+    /* Surface spotlight */
+    .spot-card::after {
+      content: ""; position: absolute; inset: 0; border-radius: inherit;
+      background: radial-gradient(600px circle at var(--mouse-x) var(--mouse-y), rgba(56, 189, 248, 0.12), transparent 40%);
+      opacity: 0; transition: opacity .4s ease; pointer-events: none; z-index: -1;
+    }
+    .spot-grid:hover .spot-card::before { opacity: 1; }
+    .spot-card:hover::after { opacity: 1; }
+    .spot-card > * { position: relative; z-index: 2; }
+
+    /* ---------- Waveform visualizer ---------- */
+    .wave { display: flex; align-items: center; gap: 3px; height: 56px; }
+    .wave span {
+      display: block; width: 3px; height: 100%; border-radius: 999px;
+      background: linear-gradient(to top, #6366f1, #38bdf8);
+      transform-origin: center; transform: scaleY(.2);
+      animation: wave 1.6s ease-in-out infinite;
+      animation-delay: var(--wd, 0s);
+      opacity: .85;
+    }
+    @keyframes wave {
+      0%, 100% { transform: scaleY(.15); }
+      50%      { transform: scaleY(var(--wh, .8)); }
+    }
+
+    /* ---------- Glowing buttons ---------- */
+    .btn-glow {
+      box-shadow: 0 0 0 1px rgba(56,189,248,.45), 0 8px 32px -8px rgba(56,189,248,.55), inset 0 1px 0 rgba(255,255,255,.25);
+    }
+    .btn-glow:hover {
+      box-shadow: 0 0 0 1px rgba(56,189,248,.7), 0 10px 44px -6px rgba(56,189,248,.75), inset 0 1px 0 rgba(255,255,255,.3);
+    }
+    .pill-glow {
+      box-shadow: 0 0 0 1px rgba(56,189,248,.35), 0 0 20px -4px rgba(56,189,248,.45);
+    }
+    .pill-glow:hover {
+      box-shadow: 0 0 0 1px rgba(56,189,248,.65), 0 0 28px -2px rgba(56,189,248,.6);
+    }
+
+    :focus-visible { outline: 2px solid #38bdf8; outline-offset: 3px; border-radius: 6px; }
+
+    /* ---------- Reduced motion ---------- */
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      .shimmer { animation: none; background-position: 30% 50%; }
+      .js .reveal { opacity: 1; transform: none; filter: none; transition: none; }
+      .wave span { animation: none; transform: scaleY(var(--wh, .6)); }
+      .animate-ping { animation: none; }
+      .spot-card::before, .spot-card::after { transition: none; }
+    }
+  </style>
+</head>
+
+<body class="noise min-h-screen font-sans text-zinc-100 antialiased">
+  <canvas id="hex-field" aria-hidden="true"></canvas>
+  <canvas id="neural-field" aria-hidden="true"></canvas>
+  <div class="pointer-events-none fixed inset-x-0 top-0 -z-10 h-[720px] bg-grid" aria-hidden="true"></div>
+  <div class="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[800px] overflow-hidden" aria-hidden="true">
+    <div class="absolute left-1/2 top-[-260px] h-[620px] w-[min(1100px,140vw)] -translate-x-1/2 rounded-full bg-[radial-gradient(closest-side,rgba(99,102,241,0.22),rgba(56,189,248,0.08)_55%,transparent)] blur-2xl"></div>
+  </div>
+
+  <a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-md focus:bg-zinc-900 focus:px-3 focus:py-2 focus:text-sm">Skip to content</a>
+
+  <!-- ============ NAV ============ -->
+  <header class="sticky top-0 z-50 backdrop-blur-xl bg-zinc-950/70 border-b border-white/5">
+    <nav class="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6" aria-label="Primary">
+      <a href="#top" class="group flex items-center gap-2.5">
+        <span class="relative grid h-7 w-7 place-items-center rounded-lg bg-gradient-to-br from-sky-400/20 to-indigo-500/20 ring-1 ring-white/10">
+          <i data-lucide="sparkle" class="h-4 w-4 text-sky-400 transition-transform duration-500 group-hover:rotate-90"></i>
+        </span>
+        <span class="whitespace-nowrap text-[11px] font-semibold tracking-[0.12em] text-zinc-100 sm:text-[13px] sm:tracking-[0.14em]">AVERY CREATIVE LABS</span>
+        <span class="hidden font-mono text-[10px] tracking-widest text-zinc-400 sm:inline">// OR-US</span>
+      </a>
+
+      <div class="flex items-center gap-1 sm:gap-2">
+        <a href="mailto:info@averycreativelabs.com" class="pill-glow ml-2 inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-sky-400/[0.06] px-3 py-1.5 text-xs sm:px-4 sm:text-sm font-medium text-sky-100 transition-all hover:bg-sky-400/10">
+          Initiate Contact
+          <i data-lucide="arrow-up-right" class="h-3.5 w-3.5"></i>
+        </a>
+      </div>
+    </nav>
+  </header>
+
+  <main id="main">
+    <!-- ============ HERO ============ -->
+    <section id="top" class="relative mx-auto max-w-6xl px-4 pb-24 pt-20 sm:px-6 sm:pt-28 md:pb-32 md:pt-36">
+      <div class="mx-auto max-w-4xl text-center">
+        <div class="reveal inline-flex items-center gap-2.5 rounded-full border border-white/10 bg-zinc-900/50 px-3.5 py-1.5 backdrop-blur-md" style="--d:0ms">
+          <span class="relative flex h-2 w-2">
+            <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
+            <span class="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
+          </span>
+          <span class="font-mono text-[10px] tracking-widest text-zinc-300 sm:text-[11px]">SYSTEMS ONLINE • INDEPENDENT AI &amp; MEDIA LAB</span>
+        </div>
+
+        <h1 class="reveal mt-8 text-balance text-4xl font-semibold leading-[1.05] tracking-tight text-zinc-50 sm:text-6xl md:text-7xl" style="--d:90ms">
+          Where <span class="shimmer">frontier AI</span> meets <span class="shimmer">creative velocity</span>, digital media, and the game table.
+        </h1>
+
+        <p class="reveal mx-auto mt-7 max-w-2xl text-pretty text-base leading-relaxed text-zinc-400 sm:text-lg" style="--d:180ms">
+          Avery Creative Labs is an independent studio in the Pacific Northwest architecting applied AI workflows, accessibility-first tabletop gaming utilities, and automated synthetic media pipelines.
+        </p>
+
+        <div class="reveal mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row" style="--d:270ms">
+          <a href="#ventures" class="btn-glow group inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-b from-sky-300 to-sky-500 px-6 py-3 text-sm font-semibold text-zinc-950 transition-all sm:w-auto">
+            Explore the Lab
+            <i data-lucide="arrow-down" class="h-4 w-4 transition-transform group-hover:translate-y-0.5"></i>
+          </a>
+          <a href="mailto:info@averycreativelabs.com" class="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/10 bg-zinc-900/40 px-6 py-3 font-mono text-[13px] text-zinc-300 backdrop-blur-md transition-colors hover:border-white/20 hover:text-zinc-50 sm:w-auto">
+            <i data-lucide="mail" class="h-4 w-4 text-zinc-400"></i>
+            info@averycreativelabs.com
+          </a>
+        </div>
+      </div>
+
+      <!-- Status strip -->
+      <div class="reveal mx-auto mt-20 grid max-w-3xl grid-cols-2 divide-white/5 overflow-hidden rounded-2xl border border-white/5 bg-zinc-900/30 backdrop-blur-md sm:grid-cols-4 sm:divide-x" style="--d:360ms">
+        <div class="px-5 py-4">
+          <div class="font-mono text-[10px] tracking-widest text-zinc-400">LAB STATUS</div>
+          <div class="mt-1 flex items-center gap-2 font-mono text-xs text-emerald-400">
+            <span class="relative flex h-1.5 w-1.5"><span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span><span class="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500"></span></span>
+            ACTIVE R&amp;D
+          </div>
+        </div>
+        <div class="px-5 py-4">
+          <div class="font-mono text-[10px] tracking-widest text-zinc-400">REGION</div>
+          <div class="mt-1 font-mono text-xs text-zinc-300">PACIFIC NW</div>
+        </div>
+        <div class="px-5 py-4">
+          <div class="font-mono text-[10px] tracking-widest text-zinc-400">DISCIPLINES</div>
+          <div class="mt-1 font-mono text-xs text-zinc-300">AI · MEDIA · TTRPG</div>
+        </div>
+        <div class="px-5 py-4">
+          <div class="font-mono text-[10px] tracking-widest text-zinc-400">LOCAL TIME</div>
+          <div class="mt-1 font-mono text-xs text-zinc-300" id="pnw-clock">--:--:-- PT</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ CAPABILITIES ============ -->
+    <section id="capabilities" class="relative scroll-mt-20 mx-auto max-w-6xl px-4 py-24 sm:px-6 md:py-32">
+      <div class="max-w-2xl">
+        <p class="reveal font-mono text-xs uppercase tracking-widest text-cyan-400/80">01 // CORE_CAPABILITIES</p>
+        <h2 class="reveal mt-4 text-3xl font-semibold tracking-tight text-zinc-50 sm:text-5xl" style="--d:80ms">Engineered for Creative Leverage</h2>
+      </div>
+
+      <div class="spot-grid mt-14 grid gap-4 md:grid-cols-3">
+        <article class="spot-card reveal p-7 sm:p-8" style="--d:0ms">
+          <div class="flex items-center justify-between">
+            <span class="grid h-11 w-11 place-items-center rounded-xl bg-sky-400/10 ring-1 ring-sky-400/20">
+              <i data-lucide="bot" class="h-5 w-5 text-sky-400"></i>
+            </span>
+            <span class="font-mono text-[10px] tracking-widest text-zinc-500">CAP_01</span>
+          </div>
+          <h3 class="mt-8 text-lg font-semibold tracking-tight text-zinc-50">Applied AI &amp; Agentic Workflows</h3>
+          <p class="mt-3 text-sm leading-relaxed text-zinc-400">Experimenting at the edge of LLM APIs and autonomous coding workflows to build utilities that eliminate creative friction and multiply output.</p>
+        </article>
+
+        <article class="spot-card reveal p-7 sm:p-8" style="--d:100ms">
+          <div class="flex items-center justify-between">
+            <span class="grid h-11 w-11 place-items-center rounded-xl bg-indigo-500/10 ring-1 ring-indigo-400/20">
+              <i data-lucide="dices" class="h-5 w-5 text-indigo-400"></i>
+            </span>
+            <span class="font-mono text-[10px] tracking-widest text-zinc-500">CAP_02</span>
+          </div>
+          <h3 class="mt-8 text-lg font-semibold tracking-tight text-zinc-50">Tabletop Gaming &amp; Accessibility</h3>
+          <p class="mt-3 text-sm leading-relaxed text-zinc-400">Designing digital companion tools that reduce cognitive load, streamline complex rulesets, and make tabletop role-playing games more accessible and inclusive at the table.</p>
+        </article>
+
+        <article class="spot-card reveal p-7 sm:p-8" style="--d:200ms">
+          <div class="flex items-center justify-between">
+            <span class="grid h-11 w-11 place-items-center rounded-xl bg-emerald-500/10 ring-1 ring-emerald-400/20">
+              <i data-lucide="clapperboard" class="h-5 w-5 text-emerald-400"></i>
+            </span>
+            <span class="font-mono text-[10px] tracking-widest text-zinc-500">CAP_03</span>
+          </div>
+          <h3 class="mt-8 text-lg font-semibold tracking-tight text-zinc-50">Synthetic Media &amp; Channel Growth</h3>
+          <p class="mt-3 text-sm leading-relaxed text-zinc-400">Developing end-to-end automated production pipelines combining generative video, voice synthesis, and original commentary to scale modern media channels.</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- ============ VENTURES ============ -->
+    <section id="ventures" class="relative scroll-mt-20 mx-auto max-w-6xl px-4 py-24 sm:px-6 md:py-32">
+      <div class="max-w-2xl">
+        <p class="reveal font-mono text-xs uppercase tracking-widest text-cyan-400/80">02 // ACTIVE_VENTURES</p>
+        <h2 class="reveal mt-4 text-3xl font-semibold tracking-tight text-zinc-50 sm:text-5xl" style="--d:80ms">Inside the Lab</h2>
+      </div>
+
+      <div class="spot-grid mt-14 grid gap-4 md:grid-cols-3">
+        <!-- Featured -->
+        <article class="spot-card reveal overflow-hidden p-7 sm:p-10 md:col-span-2 md:row-span-2 flex flex-col" style="--d:0ms">
+          <div class="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-indigo-500/10 blur-3xl" aria-hidden="true"></div>
+          <div class="flex flex-wrap items-center gap-3">
+            <span class="font-mono text-xs uppercase tracking-widest text-cyan-400/80">AI MEDIA NETWORK</span>
+            <span class="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2.5 py-1 font-mono text-[10px] tracking-widest text-emerald-300">
+              <span class="relative flex h-1.5 w-1.5"><span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span><span class="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400"></span></span>
+              ACTIVE • GROWING AUDIENCES
+            </span>
+          </div>
+
+          <div class="mt-10 flex items-start justify-between gap-6">
+            <h3 class="text-3xl font-semibold tracking-tight text-zinc-50 sm:text-5xl">AI-Powered Media Channels</h3>
+            <span class="hidden h-12 w-12 shrink-0 place-items-center rounded-2xl bg-sky-400/10 ring-1 ring-sky-400/20 sm:grid">
+              <i data-lucide="radio" class="h-5 w-5 text-sky-400"></i>
+            </span>
+          </div>
+          <p class="mt-5 max-w-xl text-base leading-relaxed text-zinc-400">A portfolio of independently operated digital media channels built and scaled with AI. Each one runs on a custom hybrid production pipeline—generative video, voice synthesis, and original commentary—designed for consistent, high-velocity publishing.</p>
+
+          <div class="mt-auto pt-12">
+            <div class="flex items-end justify-between gap-6 border-t border-white/5 pt-6">
+              <div class="font-mono text-[10px] leading-5 tracking-widest text-zinc-400">
+                <div>SIGNAL // <span class="text-zinc-300">BROADCASTING</span></div>
+                <div>PIPELINE // <span class="text-zinc-300">HYBRID_SYNTH_V2</span></div>
+              </div>
+              <div class="wave" id="waveform" aria-hidden="true"></div>
+            </div>
+          </div>
+        </article>
+
+        <!-- Card 2 -->
+        <article class="spot-card reveal p-7 sm:p-8 flex flex-col" style="--d:100ms">
+          <div class="flex items-center justify-between">
+            <span class="grid h-10 w-10 place-items-center rounded-xl bg-indigo-500/10 ring-1 ring-indigo-400/20">
+              <i data-lucide="scroll-text" class="h-[18px] w-[18px] text-indigo-400"></i>
+            </span>
+            <span class="rounded-full border border-sky-400/20 bg-sky-400/10 px-2.5 py-1 font-mono text-[10px] tracking-widest text-sky-300">IN DEVELOPMENT</span>
+          </div>
+          <p class="mt-7 font-mono text-[10px] uppercase tracking-widest text-cyan-400/80">SOFTWARE &amp; TTRPG UTILITIES</p>
+          <h3 class="mt-2 text-lg font-semibold tracking-tight text-zinc-50">Tabletop Accessibility Suite</h3>
+          <p class="mt-3 text-sm leading-relaxed text-zinc-400">AI-assisted web utilities built for Game Masters and players—focused on fast rules reference, session accessibility, and keeping the focus on storytelling rather than bookkeeping.</p>
+        </article>
+
+        <!-- Card 3 -->
+        <article class="spot-card reveal p-7 sm:p-8 flex flex-col" style="--d:200ms">
+          <div class="flex items-center justify-between">
+            <span class="grid h-10 w-10 place-items-center rounded-xl bg-sky-400/10 ring-1 ring-sky-400/20">
+              <i data-lucide="cpu" class="h-[18px] w-[18px] text-sky-400"></i>
+            </span>
+            <span class="rounded-full border border-indigo-400/20 bg-indigo-400/10 px-2.5 py-1 font-mono text-[10px] tracking-widest text-indigo-300">ONGOING R&amp;D</span>
+          </div>
+          <p class="mt-7 font-mono text-[10px] uppercase tracking-widest text-cyan-400/80">INTERNAL TOOLING &amp; R&amp;D</p>
+          <h3 class="mt-2 text-lg font-semibold tracking-tight text-zinc-50">Creative Automation &amp; Agents</h3>
+          <p class="mt-3 text-sm leading-relaxed text-zinc-400">Rapid prototyping of custom scripting engines, synthetic video workflows, and developer productivity agents.</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- ============ PHILOSOPHY ============ -->
+    <section id="philosophy" class="relative scroll-mt-20 mx-auto max-w-6xl px-4 py-24 sm:px-6 md:py-32">
+      <div class="grid gap-12 md:grid-cols-12 md:gap-10">
+        <div class="md:col-span-7">
+          <p class="reveal font-mono text-xs uppercase tracking-widest text-cyan-400/80">03 // THESIS</p>
+          <h2 class="reveal mt-4 text-balance text-3xl font-semibold tracking-tight text-zinc-50 sm:text-5xl" style="--d:80ms">Built for rapid iteration and real-world utility.</h2>
+          <p class="reveal mt-7 max-w-xl text-base leading-relaxed text-zinc-400 sm:text-lg" style="--d:160ms">Avery Creative Labs operates as an agile incubator for software products and media experiments. Whether shipping accessible web utilities for tabletop gaming groups or scaling synthetic media workflows, the mission remains the same: turning emerging technology into practical, human-centered experiences.</p>
+        </div>
+
+        <div class="reveal md:col-span-5 md:pt-10" style="--d:240ms">
+          <div class="overflow-hidden rounded-2xl border border-white/[0.06] bg-zinc-900/40 backdrop-blur-md">
+            <div class="flex items-center gap-1.5 border-b border-white/5 px-4 py-3">
+              <span class="h-2.5 w-2.5 rounded-full bg-zinc-700"></span>
+              <span class="h-2.5 w-2.5 rounded-full bg-zinc-700"></span>
+              <span class="h-2.5 w-2.5 rounded-full bg-zinc-700"></span>
+              <span class="ml-3 font-mono text-[10px] tracking-widest text-zinc-400">thesis.config</span>
+            </div>
+            <pre class="overflow-x-auto px-5 py-5 font-mono text-[12.5px] leading-7 text-zinc-400"><code><span class="text-zinc-500">// operating principles</span>
+<span class="text-indigo-400">mode</span>:      <span class="text-sky-300">"agile_incubator"</span>
+<span class="text-indigo-400">cadence</span>:   <span class="text-sky-300">"rapid_iteration"</span>
+<span class="text-indigo-400">outputs</span>:   [<span class="text-sky-300">"software"</span>, <span class="text-sky-300">"media"</span>]
+<span class="text-indigo-400">priority</span>:  <span class="text-sky-300">"real_world_utility"</span>
+<span class="text-indigo-400">design</span>:    <span class="text-sky-300">"human_centered"</span>
+<span class="text-indigo-400">status</span>:    <span class="text-emerald-400">ACTIVE</span><span class="cursor-blink text-sky-400">▍</span></code></pre>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============ FOOTER ============ -->
+  <footer class="border-t border-white/5">
+    <div class="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-10 sm:px-6 md:flex-row md:items-center md:justify-between">
+      <p class="text-sm text-zinc-400">© 2026 Avery Creative Labs LLC. All rights reserved. Pacific Northwest.</p>
+      <ul class="flex flex-wrap items-center gap-x-6 gap-y-3 font-mono text-xs tracking-widest">
+        <li><a href="mailto:info@averycreativelabs.com" class="text-zinc-400 transition-colors hover:text-sky-400">EMAIL</a></li>
+      </ul>
+    </div>
+  </footer>
+
+  <style>
+    .cursor-blink { animation: blink 1.1s steps(1) infinite; }
+    @keyframes blink { 50% { opacity: 0; } }
+    @media (prefers-reduced-motion: reduce) { .cursor-blink { animation: none; } }
+  </style>
+
+  <script>
+  (() => {
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    /* ---------- Icons ---------- */
+    window.addEventListener('DOMContentLoaded', () => {
+      if (window.lucide) window.lucide.createIcons({ attrs: { 'stroke-width': 1.75 } });
+    });
+
+    /* ---------- Entrance animations ---------- */
+    const revealEls = document.querySelectorAll('.reveal');
+    if (reduceMotion || !('IntersectionObserver' in window)) {
+      revealEls.forEach(el => el.classList.add('is-visible'));
+    } else {
+      const io = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-visible');
+            io.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+      revealEls.forEach(el => io.observe(el));
+    }
+
+    /* ---------- Spotlight cards ---------- */
+    document.querySelectorAll('.spot-grid').forEach(grid => {
+      const cards = grid.querySelectorAll('.spot-card');
+      grid.addEventListener('mousemove', (e) => {
+        for (const card of cards) {
+          const r = card.getBoundingClientRect();
+          card.style.setProperty('--mouse-x', `${e.clientX - r.left}px`);
+          card.style.setProperty('--mouse-y', `${e.clientY - r.top}px`);
+        }
+      });
+    });
+
+    /* ---------- Waveform bars ---------- */
+    const wave = document.getElementById('waveform');
+    if (wave) {
+      const bars = 28;
+      for (let i = 0; i < bars; i++) {
+        const s = document.createElement('span');
+        const envelope = Math.sin((i / (bars - 1)) * Math.PI);
+        s.style.setProperty('--wh', (0.3 + envelope * 0.7 * (0.6 + Math.random() * 0.4)).toFixed(2));
+        s.style.setProperty('--wd', `${(-Math.random() * 1.6).toFixed(2)}s`);
+        s.style.animationDuration = `${(1.1 + Math.random() * 0.9).toFixed(2)}s`;
+        wave.appendChild(s);
+      }
+    }
+
+    /* ---------- PNW clock ---------- */
+    const clock = document.getElementById('pnw-clock');
+    if (clock) {
+      const fmt = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Los_Angeles', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+      const tick = () => { clock.textContent = `${fmt.format(new Date())} PT`; };
+      tick(); setInterval(tick, 1000);
+    }
+
+    /* ---------- Neural field canvas ---------- */
+    const canvas = document.getElementById('neural-field');
+    const ctx = canvas.getContext('2d');
+    let w = 0, h = 0, dpr = 1, nodes = [];
+    const mouse = { x: -9999, y: -9999, active: false };
+    const LINK = 130;          // node-to-node link distance
+    const REACH = 200;         // cursor influence radius
+    const CYAN = '56,189,248', INDIGO = '99,102,241';
+
+    function resize() {
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      w = window.innerWidth; h = window.innerHeight;
+      canvas.width = Math.floor(w * dpr); canvas.height = Math.floor(h * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const count = Math.min(120, Math.max(36, Math.floor((w * h) / 14000)));
+      nodes = Array.from({ length: count }, () => ({
+        x: Math.random() * w,
+        y: Math.random() * h,
+        vx: (Math.random() - 0.5) * 0.18,
+        vy: (Math.random() - 0.5) * 0.18,
+        r: Math.random() * 1.2 + 0.6,
+        hue: Math.random() < 0.6 ? CYAN : INDIGO,
+        glow: 0,
+      }));
+    }
+
+    function frame() {
+      ctx.clearRect(0, 0, w, h);
+
+      for (const n of nodes) {
+        if (!reduceMotion) {
+          n.x += n.vx; n.y += n.vy;
+          if (n.x < -20) n.x = w + 20; else if (n.x > w + 20) n.x = -20;
+          if (n.y < -20) n.y = h + 20; else if (n.y > h + 20) n.y = -20;
+        }
+        const dx = n.x - mouse.x, dy = n.y - mouse.y;
+        const d = Math.hypot(dx, dy);
+        const target = mouse.active && d < REACH ? 1 - d / REACH : 0;
+        n.glow += (target - n.glow) * (reduceMotion ? 1 : 0.08);
+      }
+
+      // node-to-node links
+      ctx.lineWidth = 1;
+      for (let i = 0; i < nodes.length; i++) {
+        const a = nodes[i];
+        for (let j = i + 1; j < nodes.length; j++) {
+          const b = nodes[j];
+          const dx = a.x - b.x, dy = a.y - b.y;
+          const d2 = dx * dx + dy * dy;
+          if (d2 > LINK * LINK) continue;
+          const t = 1 - Math.sqrt(d2) / LINK;
+          const g = Math.max(a.glow, b.glow);
+          const alpha = t * (0.06 + g * 0.22);
+          if (alpha < 0.01) continue;
+          ctx.strokeStyle = `rgba(${g > 0.15 ? CYAN : INDIGO},${alpha.toFixed(3)})`;
+          ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+        }
+      }
+
+      // cursor vectors
+      if (mouse.active) {
+        for (const n of nodes) {
+          if (n.glow < 0.05) continue;
+          const grad = ctx.createLinearGradient(mouse.x, mouse.y, n.x, n.y);
+          grad.addColorStop(0, `rgba(${CYAN},0)`);
+          grad.addColorStop(1, `rgba(${n.hue},${(n.glow * 0.25).toFixed(3)})`);
+          ctx.strokeStyle = grad;
+          ctx.beginPath(); ctx.moveTo(mouse.x, mouse.y); ctx.lineTo(n.x, n.y); ctx.stroke();
+        }
+      }
+
+      // nodes
+      for (const n of nodes) {
+        const alpha = 0.18 + n.glow * 0.5;
+        ctx.fillStyle = `rgba(${n.hue},${alpha.toFixed(3)})`;
+        ctx.beginPath(); ctx.arc(n.x, n.y, n.r + n.glow * 1.4, 0, Math.PI * 2); ctx.fill();
+        if (n.glow > 0.2) {
+          ctx.fillStyle = `rgba(${n.hue},${(n.glow * 0.08).toFixed(3)})`;
+          ctx.beginPath(); ctx.arc(n.x, n.y, 6 + n.glow * 6, 0, Math.PI * 2); ctx.fill();
+        }
+      }
+
+      if (!reduceMotion) requestAnimationFrame(frame);
+    }
+
+    window.addEventListener('resize', () => { resize(); if (reduceMotion) frame(); }, { passive: true });
+    window.addEventListener('pointermove', (e) => {
+      if (e.pointerType === 'touch') return;
+      mouse.x = e.clientX; mouse.y = e.clientY; mouse.active = true;
+      if (reduceMotion) frame();
+    }, { passive: true });
+    document.documentElement.addEventListener('mouseleave', () => {
+      mouse.active = false; if (reduceMotion) frame();
+    });
+
+    resize();
+    frame();
+
+    /* ---------- Hex grid trace ---------- */
+    // Near-invisible hex lattice; cells the cursor crosses light up and fade, leaving a glowing trail.
+    const hexCanvas = document.getElementById('hex-field');
+    const hctx = hexCanvas.getContext('2d');
+    const base = document.createElement('canvas');
+    const bctx = base.getContext('2d');
+    const R = 22;                       // hex radius (center to vertex)
+    const HW = Math.sqrt(3) * R;        // hex width
+    const RH = 1.5 * R;                 // row height
+    const TRACE = 95;                   // cursor reach in px
+    const DECAY = reduceMotion ? 0 : 0.955;
+    let cols = 0, rows = 0, energy = new Float32Array(0), hexRunning = false;
+    let last = null;
+
+    const centerX = (c, r) => c * HW + (r & 1 ? HW / 2 : 0);
+    const centerY = (r) => r * RH;
+
+    function hexPath(g, cx, cy, rad) {
+      g.moveTo(cx, cy - rad);
+      for (let k = 1; k < 6; k++) {
+        const a = Math.PI / 3 * k - Math.PI / 2;
+        g.lineTo(cx + rad * Math.cos(a), cy + rad * Math.sin(a));
+      }
+      g.closePath();
+    }
+
+    function hexResize() {
+      for (const c of [hexCanvas, base]) { c.width = Math.floor(w * dpr); c.height = Math.floor(h * dpr); }
+      hctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      bctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      cols = Math.ceil(w / HW) + 2;
+      rows = Math.ceil(h / RH) + 2;
+      energy = new Float32Array(cols * rows);
+      // Black-on-black base lattice, cached once
+      bctx.clearRect(0, 0, w, h);
+      bctx.strokeStyle = 'rgba(255,255,255,0.014)';
+      bctx.lineWidth = 1;
+      bctx.beginPath();
+      for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) hexPath(bctx, centerX(c, r), centerY(r), R - 1);
+      bctx.stroke();
+      drawHex();
+    }
+
+    function excite(x, y) {
+      const r0 = Math.max(0, Math.floor((y - TRACE) / RH)), r1 = Math.min(rows - 1, Math.ceil((y + TRACE) / RH));
+      const c0 = Math.max(0, Math.floor((x - TRACE) / HW) - 1), c1 = Math.min(cols - 1, Math.ceil((x + TRACE) / HW));
+      for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) {
+        const d = Math.hypot(centerX(c, r) - x, centerY(r) - y);
+        if (d >= TRACE) continue;
+        const t = 1 - d / TRACE;
+        const i = r * cols + c;
+        energy[i] = Math.max(energy[i], t * t);
+      }
+    }
+
+    function drawHex() {
+      hctx.clearRect(0, 0, w, h);
+      hctx.drawImage(base, 0, 0, w, h);
+      let alive = false;
+      hctx.lineJoin = 'round';
+      for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+        const i = r * cols + c;
+        const e = energy[i];
+        if (e < 0.004) { energy[i] = 0; continue; }
+        alive = true;
+        const cx = centerX(c, r), cy = centerY(r);
+        const hue = e > 0.35 ? CYAN : INDIGO;
+        // soft outer glow
+        hctx.beginPath(); hexPath(hctx, cx, cy, R - 1);
+        hctx.lineWidth = 4;
+        hctx.strokeStyle = `rgba(${hue},${(e * 0.07).toFixed(3)})`;
+        hctx.stroke();
+        // crisp trace line + faint cell fill
+        hctx.lineWidth = 1;
+        hctx.strokeStyle = `rgba(${hue},${(e * 0.42).toFixed(3)})`;
+        hctx.stroke();
+        hctx.fillStyle = `rgba(${hue},${(e * 0.035).toFixed(3)})`;
+        hctx.fill();
+        energy[i] = e * DECAY;
+      }
+      return alive;
+    }
+
+    function hexLoop() {
+      const alive = drawHex();
+      if (alive) requestAnimationFrame(hexLoop); else hexRunning = false;
+    }
+
+    window.addEventListener('pointermove', (e) => {
+      if (e.pointerType === 'touch') return;
+      const x = e.clientX, y = e.clientY;
+      // Interpolate fast strokes so the trace stays continuous
+      if (last && !reduceMotion) {
+        const dist = Math.hypot(x - last.x, y - last.y);
+        const steps = Math.min(40, Math.floor(dist / (R * 0.6)));
+        for (let s = 1; s <= steps; s++) excite(last.x + (x - last.x) * s / (steps + 1), last.y + (y - last.y) * s / (steps + 1));
+      }
+      excite(x, y);
+      last = { x, y };
+      if (reduceMotion) { drawHex(); return; }
+      if (!hexRunning) { hexRunning = true; requestAnimationFrame(hexLoop); }
+    }, { passive: true });
+    document.documentElement.addEventListener('mouseleave', () => { last = null; if (reduceMotion) { energy.fill(0); drawHex(); } });
+    window.addEventListener('resize', hexResize, { passive: true });
+    hexResize();
+  })();
+  </script>
+</body>
+</html>
